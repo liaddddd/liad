@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>המפתיעים הכלבים - משחק טייקון</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <a href="game.html" target="_blank">הכנס למשחק</a>
+
+
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="ui">ניקוד: <span id="score">0</span></div>
+    <div id="dogInfo"></div>
+    <div id="money-display">כסף: <span id="money">0</span></div>
+    <div id="buttons-container"></div>
+
+    <script src="script.js"></script>
+    
+</body>
+</html>
+
+<script>
+// Initialize Three.js scene
+
+
+
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+// Texture loader
+const loader = new THREE.TextureLoader();
+
+// Create ground
+const groundTexture = loader.load('textures/grass.jpg');
+groundTexture.wrapS = THREE.RepeatWrapping;
+groundTexture.wrapT = THREE.RepeatWrapping;
+groundTexture.repeat.set(50, 50);
+const groundGeometry = new THREE.PlaneGeometry(200, 200);
+const groundMaterial = new THREE.MeshPhongMaterial({map: groundTexture});
+const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// Create water park
+const poolTexture = loader.load('textures/water.jpg');
+poolTexture.wrapS = THREE.RepeatWrapping;
+poolTexture.wrapT = THREE.RepeatWrapping;
+poolTexture.repeat.set(5, 5);
+const poolGeometry = new THREE.CircleGeometry(15, 32);
+const poolMaterial = new THREE.MeshPhongMaterial({map: poolTexture, transparent: true, opacity: 0.8});
+const pool = new THREE.Mesh(poolGeometry, poolMaterial);
+pool.rotation.x = -Math.PI / 2;
+pool.position.set(0, 0.1, 0);
+pool.receiveShadow = true;
+scene.add(pool);
+
+// Create dog hotel
+// טוען את הטקסטורה לבית
+const houseTexture = loader.load('textures/house_texture.jpg');
+
+// מגדיר את הגאומטריה והחומר של הבית עם הטקסטורה החדשה
+const hotelGeometry = new THREE.BoxGeometry(10, 15, 10);
+const hotelMaterial = new THREE.MeshPhongMaterial({ map: houseTexture });
+const hotel = new THREE.Mesh(hotelGeometry, hotelMaterial);
+hotel.position.set(-20, 7.5, -10);
+hotel.castShadow = true;
+hotel.receiveShadow = true;
+scene.add(hotel);
+
+
+// Create training center
+const centerTexture = loader.load('textures/wood.jpg');
+const centerGeometry = new THREE.CylinderGeometry(5, 5, 10, 16);
+const centerMaterial = new THREE.MeshPhongMaterial({map: centerTexture});
+const center = new THREE.Mesh(centerGeometry, centerMaterial);
+center.position.set(20, 5, -10);
+center.castShadow = true;
+center.receiveShadow = true;
+scene.add(center);
+
+// Add lighting
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+scene.add(ambientLight);
+const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+directionalLight.position.set(50, 200, 100);
+directionalLight.castShadow = true;
+directionalLight.shadow.mapSize.width = 1024;
+directionalLight.shadow.mapSize.height = 1024;
+scene.add(directionalLight);
+
+// Camera position
+camera.position.set(0, 30, 50);
+camera.lookAt(scene.position);
+
+// Dog class
+class Dog {
+  constructor(name, age, personality, description, texture) {
+    this.name = name;
+    this.age = age;
+    this.personality = personality;
+    this.description = description;
+    this.texture = texture;
+    this.tricks = 0;
+    this.mesh = this.createDogMesh();
+    scene.add(this.mesh);
+  }
+
+  createDogMesh() {
+    const dogTexture = loader.load(this.texture);
+    const dogGeometry = new THREE.BoxGeometry(2, 1.5, 3);
+    const dogMaterial = new THREE.MeshPhongMaterial({map: dogTexture});
+    const dogMesh = new THREE.Mesh(dogGeometry, dogMaterial);
+    dogMesh.position.set(Math.random() * 40 - 20, 0.75, Math.random() * 40 - 20);
+    dogMesh.castShadow = true;
+    dogMesh.receiveShadow = true;
+    return dogMesh;
+  }
+
+  move() {
+    this.mesh.position.x += (Math.random() - 0.5) * 0.2;
+    this.mesh.position.z += (Math.random() - 0.5) * 0.2;
+    this.mesh.rotation.y = Math.atan2(this.mesh.position.x, this.mesh.position.z);
+  }
+
+  train() {
+    this.tricks++;
+    updateDogInfo(this);
+  }
+}
+
+// Create dogs with detailed textures
+const dogs = [
+  new Dog("רודריגז", 3, "עצבני על כל העולם", "רודריגז הוא כלב שונא בני אדם ומאלפים. הוא תמיד כועס ולא מקשיב לאף אחד.", 'textures/rodriguez_texture.jpg'),
+  new Dog("לונה", 2, "שובבה ואנרגטית", "לונה אוהבת לשחק במים ולרוץ בפארק.", 'textures/luna_texture.jpg'),
+  new Dog("מקס", 5, "חכם ונאמן", "מקס הוא הכלב הכי ממושמע בקבוצה ותמיד עוזר לאחרים.", 'textures/max_texture.jpg')
+];
+
+// Update dog info UI
+function updateDogInfo(dog) {
+  const dogInfoElement = document.getElementById('dogInfo');
+  dogInfoElement.innerHTML = `
+    <h3>${dog.name}</h3>
+    <p>גיל: ${dog.age}</p>
+    <p>אופי: ${dog.personality}</p>
+    <p>תיאור: ${dog.description}</p>
+    <p>טריקים שלמד: ${dog.tricks}</p>
+  `;
+}
+
+// Add sky
+const skyTexture = loader.load('textures/sky.jpg');
+const skyGeometry = new THREE.SphereGeometry(500, 32, 32);
+const skyMaterial = new THREE.MeshBasicMaterial({map: skyTexture, side: THREE.BackSide});
+const sky = new THREE.Mesh(skyGeometry, skyMaterial);
+scene.add(sky);
+
+// Add trees
+function createTree(x, z) {
+  const trunkTexture = loader.load('textures/tree_bark.jpg');
+  const trunkGeometry = new THREE.CylinderGeometry(0.5, 0.5, 5, 8);
+  const trunkMaterial = new THREE.MeshPhongMaterial({map: trunkTexture});
+  const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+  trunk.position.set(x, 2.5, z);
+  trunk.castShadow = true;
+  trunk.receiveShadow = true;
+  scene.add(trunk);
+
+  const leavesTexture = loader.load('textures/leaves.jpg');
+  const leavesGeometry = new THREE.ConeGeometry(3, 7, 8);
+  const leavesMaterial = new THREE.MeshPhongMaterial({map: leavesTexture});
+  const leaves = new THREE.Mesh(leavesGeometry, leavesMaterial);
+  leaves.position.set(x, 7, z);
+  leaves.castShadow = true;
+  leaves.receiveShadow = true;
+  scene.add(leaves);
+}
+
+for (let i = 0; i < 20; i++) {
+  const x = Math.random() * 100 - 50;
+  const z = Math.random() * 100 - 50;
+  createTree(x, z);
+}
+
+// Add particle system for floating leaves
+const particleCount = 500;
+const particles = new THREE.BufferGeometry();
+const positions = new Float32Array(particleCount * 3);
+
+for (let i = 0; i < particleCount * 3; i += 3) {
+  positions[i] = Math.random() * 100 - 50;
+  positions[i + 1] = Math.random() * 50;
+  positions[i + 2] = Math.random() * 100 - 50;
+}
+
+particles.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+const leafTexture = loader.load('textures/leaf.png');
+const particleMaterial = new THREE.PointsMaterial({
+  size: 0.5,
+  map: leafTexture,
+  transparent: true,
+  blending: THREE.AdditiveBlending,
+  depthWrite: false
+});
+
+const particleSystem = new THREE.Points(particles, particleMaterial);
+scene.add(particleSystem);
+
+// Animate particles
+function animateParticles() {
+  const positions = particles.attributes.position.array;
+
+  for (let i = 0; i < positions.length; i += 3) {
+    positions[i] += Math.sin(Date.now() * 0.001 + i) * 0.01;
+    positions[i + 1] -= 0.05;
+    if (positions[i + 1] < 0) positions[i + 1] = 50;
+    positions[i + 2] += Math.cos(Date.now() * 0.001 + i) * 0.01;
+  }
+
+  particles.attributes.position.needsUpdate = true;
+}
+
+// Game loop
+function animate() {
+  requestAnimationFrame(animate);
+  
+  dogs.forEach(dog => dog.move());
+  animateParticles();
+  
+  renderer.render(scene, camera);
+}
+
+animate();
+
+// Handle window resize
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// Handle click events for interacting with dogs
+renderer.domElement.addEventListener('click', (event) => {
+  const mouse = new THREE.Vector2(
+    (event.clientX / window.innerWidth) * 2 - 1,
+    -(event.clientY / window.innerHeight) * 2 + 1
+  );
+
+  const raycaster = new THREE.Raycaster();
+  raycaster.setFromCamera(mouse, camera);
+
+  const intersects = raycaster.intersectObjects(dogs.map(dog => dog.mesh));
+
+  if (intersects.length > 0) {
+    const clickedDog = dogs.find(dog => dog.mesh === intersects[0].object);
+    clickedDog.train();
+    
+    // Update score
+    const scoreElement = document.getElementById('score');
+    scoreElement.textContent = parseInt(scoreElement.textContent) + 1;
+
+    // Play bark sound
+    bark.play();
+  }
+});
+
+// Sound effects
+const bark = new Howl({
+  src: ['audio/bark.mp3']
+});
+
+</script>
+</body>
+</html>
